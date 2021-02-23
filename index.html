@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task1-2</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <h1>Задание 1</h1>
+
+    <label><input type="text" id="rows" value="2" style="font-family: Verdana; font-size: 12px; margin-left: 15px; width: 50px;">Количество строк (rows)</label>
+    <label><input type="text" id="columns" value="3" style="font-family: Verdana; font-size: 12px; margin-left: 15px; width: 50px;">Количество столбцов (columns)</label>
+    <p><label><input type="checkbox" id="checkbox" value="Рамка" style="margin-left: 15px">Рамка</label></p>
+    <button id="create" onclick="addTable();" style="background-color: lime; margin: 5px 15px">Create table</button>
+    <button id="deleate" onclick="destroyTable();" style="background-color: red; margin: 5px 15px">Destroy table</button>
+    <input class="hidden" type="text" placeholder="Введите текст для поиска" id="search-text">
+    <table id="table"></table>
+    <ul id="pagination"></ul>
+
+    <h1>Задание 2</h1>
+
+    <form class="changingColor">
+        <fieldset>
+            <legend>Выбор цвета</legend>
+            <p>Выберите ниже, цвет чего будем изменять: фона страницы или текста страницы</p>
+            <input id="text" type="button" value="color" class="chosen">
+            <input id="background" type="button" value="background-color">
+            <div id="polzunok" class="polzunok"></div>
+            <b>Значение цвета: <span id="result_polzunok"></span></b>
+        </fieldset>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script type="text/javascript">
+        "use strict";
+        // ---------------------------------------------------------------------------------------------------\\
+        // Задание 1
+        let searchInput = document.querySelector('#search-text'); //элемент фильтрации
+        let rowsArray = ""; //массив всех значений таблицы
+        let rowsArraySearch = ""; //массив отфильтрованных значений таблицы
+        let searchMaking = false; //индикатор выполнения фильтрации
+        let pagination = document.querySelector('#pagination'); //элемент отображения номеров страниц таблицы
+        let notesOnPage = 50; //кол-во записей таблицы на одной странице
+        let countOfItems = ""; //кол-во страниц таблицы
+        let items = []; //массив номеров страниц таблицы
+        let numColumns = ""; //элемент считывания кол-ва столбцов таблицы
+        let numRows = ""; //элемент считывания кол-ва строк таблицы
+        let checkbox = ""; //элемент для определения наличия или отсутствия границы у таблицы
+        let headers = ""; //заголовки таблицы
+
+        // добавление таблицы
+        function addTable() {
+            // показываем поле для фильтрации и добавляем к нему обработчик
+            searchInput.classList.remove("hidden");
+            searchInput.addEventListener('keyup', function() {
+                tableSearch();
+                showPage(items[0]);
+            });
+
+            // считывание и инициализация заданных данных таблицы из элментов управления
+            numColumns = document.getElementById("columns");
+            numRows = document.getElementById("rows");
+            checkbox = document.getElementById("checkbox");
+            let rows = numRows.value,
+                columns = numColumns.value,
+                tr = "",
+                td = "",
+                th = "",
+                table = document.querySelector('table'),
+                text = "";
+            table.innerHTML = '';
+            if (checkbox.checked == true) {
+                table.setAttribute("border", "2px");
+            } else {
+                table.setAttribute("border", "0");
+            }
+
+            // создание первоначальных заголовков таблицы
+            tr = document.createElement("tr");
+            for (let k = 0; k < columns; k++) {
+                th = document.createElement("th");
+                th.innerText = 'Заголовок столбца ' + (k + 1);
+                tr.appendChild(th);
+            }
+            table.appendChild(tr);
+
+            // создание первоначальных обычных ячеек таблицы
+            for (let i = 0; i < rows; i++) {
+                tr = document.createElement("tr");
+                for (let j = 0; j < columns; j++) {
+                    td = document.createElement("td");
+                    text = document.createTextNode((i + 1) + "-" + (j + 1));
+                    td.appendChild(text);
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+
+            // создание массива из первоначальной таблицы и вычисление кол-ва страниц у таблицы
+            rowsArray = Array.from(table.rows);
+            countOfItems = Math.ceil(rowsArray.length / notesOnPage); 
+
+            // отображение записей таблицы на одной странице
+            let showPage = (function() {
+                let active;
+                return function(item) {
+                    if (active) {
+                        active.classList.remove('active');
+                    }
+                    active = item;
+                    item.classList.add('active');
+                    let pageNum = +item.innerHTML;
+                    let start = (pageNum - 1) * notesOnPage;
+                    let end = start + notesOnPage;
+                    let notes = "";
+
+                    // выбор массива, из которого будут отображаться элементы таблицы на странице в зависимости от того, 
+                    // осуществляется в данный момент фильтрация или нет,
+                    // а также пересчитывание кол-ва отображаемых записей таблицы на странице
+                    if (searchMaking == false) {
+                        notes = rowsArray.slice(start, end);
+                        countOfItems = Math.ceil(rowsArray.length / notesOnPage);
+                    } else {
+                        notes = rowsArraySearch.slice(start, end);
+                        countOfItems = Math.ceil(rowsArraySearch.length / notesOnPage);
+                    }
+
+                    // создание и отображение получившейся таблицы на странице
+                    table.innerHTML = '';
+                    for (let note of notes) {
+                        let tr = document.createElement('tr');
+                        table.appendChild(tr);
+                        for (let i=0; i<note.cells.length; i++) {
+                            if (note.cells[i].tagName == 'TH') {    
+                                createCellHeader(note.cells[i].innerHTML, tr, i);
+                            }
+                            else {
+                                createCell(note.cells[i].innerHTML, tr);
+                            }
+                        }
+                    }
+
+                    //прикрепление к заголовкам таблицы обработчиков на сортировку
+                    headers = table.querySelectorAll('th');
+                    [].forEach.call(headers, function(header, index) {
+                        header.addEventListener('click', function() {
+                            sortColumn(index);
+                            showPage(items[0]);
+                        });
+                    });
+
+                    // скрытие и отображение номеров страниц получившейся таблицы в зависимости от того, 
+                    // осуществляется в данный момент фильтрация или нет
+                    if (searchMaking == true) {
+                        let liElements = document.querySelectorAll('#pagination > li');
+                        for (let liElem of liElements) {
+                            liElem.classList.add("hidden");
+                        }
+                        for (let i = 0; i <= countOfItems-1; i++) {
+                            liElements[i].classList.remove("hidden");
+                        }
+                    } else {
+                        let liElements = document.querySelectorAll('#pagination > li');
+                        for (let liElem of liElements) {
+                            liElem.classList.remove("hidden");
+                        }
+                    }
+
+                };
+
+            }());
+
+            // создание элементов номеров страниц таблицы, которое включает в себя удаление прежней нумерации,
+            // а также назначения номерам страниц соответствующих обработчиков
+            items = [];
+            let liElements = document.querySelectorAll('#pagination > li');
+            for (let liElem of liElements) {
+                liElem.remove();
+            }
+            for (let i = 1; i <= countOfItems; i++) {
+                let li = document.createElement('li');
+                li.innerHTML = i;
+                pagination.appendChild(li);
+                items.push(li);
+            }
+            showPage(items[0]);
+            for (let item of items) {
+                item.addEventListener('click', function() {
+                    showPage(this);
+                });
+            }
+
+        }
+
+        // удаление таблицы
+        function destroyTable() {
+            // скрываем поле для фильтрации
+            searchInput.classList.add("hidden");
+
+            let table = document.querySelector("table");
+            table.innerHTML = '';
+            table.setAttribute("border", "0");
+            rowsArray = "";
+            items = [];
+            let liElements = document.querySelectorAll('#pagination > li');
+            for (let liElem of liElements) {
+                liElem.remove();
+            }
+            countOfItems = "";
+        }
+
+        // создание строк таблицы с обычными ячейками 
+        function createCell(text, tr) {
+            let td = document.createElement('td');
+            td.innerHTML = text;
+            tr.appendChild(td);
+        }
+
+        // создание строк таблицы с заголовками столбцов 
+        function createCellHeader(text, tr, index) {
+            let th = document.createElement('th');
+            th.innerHTML = text;
+            // назначаем каждому заголовку тип данных
+            let selectsTypeOfColumns = document.querySelectorAll('[id^="type_column_"]');
+            th.dataset.typeColumnData = selectsTypeOfColumns[index].value;
+
+            tr.appendChild(th);
+            tr.dataset.typeTr = "headerTr";
+        }
+
+        // создать selectы с выбором типа данных колонок сразу при загрузке страницы, считывая кол-во колонк, заданное по умолчанию
+        numColumns = document.getElementById("columns");
+        checkbox = document.getElementById("checkbox");
+        for (let i=0; i<numColumns.value; i++) {
+            let textForSelect = document.createElement('p');
+            let labelText = document.createTextNode('Выберите тип данных столбца ' + (i+1) + ': ');
+            let selectTypeOfColumnData = document.createElement('select');
+            selectTypeOfColumnData.setAttribute('id', 'type_column_' + i);
+            let option_1 = new Option("string", "string", true, true);
+            let option_2 = new Option("number", "number");
+            checkbox.closest('p').before(textForSelect);
+            textForSelect.append(labelText);
+            textForSelect.append(selectTypeOfColumnData);
+            selectTypeOfColumnData.append(option_1);
+            selectTypeOfColumnData.append(option_2);
+            selectTypeOfColumnData.addEventListener("change", function() {
+                    let thesWithTypeOfColumn = document.querySelectorAll('th');
+                    if (thesWithTypeOfColumn.length != 0) {
+                        if (thesWithTypeOfColumn[0].hasAttribute("data-type-column-data")) {
+                            let indexOfSelect = parseInt(selectTypeOfColumnData.getAttribute('id').match(/\d+/));
+                            thesWithTypeOfColumn[indexOfSelect].dataset.typeColumnData = selectTypeOfColumnData.value;
+                        }
+                    }
+            });    
+        }
+        
+        // создать нужное кол-во selectов с типом данных колонок после изменения кол-ва колонок
+        columns.oninput = function() {
+            let oldTypeSelects = document.querySelectorAll('[id^="type_column_"]');
+            for (let oldTypeSelect of oldTypeSelects) {
+                let parentOldTypeSelect = oldTypeSelect.closest('p');
+                parentOldTypeSelect.remove();
+            }
+            numColumns = document.getElementById("columns");
+            checkbox = document.getElementById("checkbox");
+            for (let i=0; i<numColumns.value; i++) {
+                let textForSelect = document.createElement('p');
+                let labelText = document.createTextNode('Выберите тип данных столбца ' + (i+1) + ': ');
+                let selectTypeOfColumnData = document.createElement('select');
+                selectTypeOfColumnData.setAttribute('id', 'type_column_' + i);
+                let option_1 = new Option("string", "string", true, true);
+                let option_2 = new Option("number", "number");
+                checkbox.closest('p').before(textForSelect);
+                textForSelect.append(labelText);
+                textForSelect.append(selectTypeOfColumnData);
+                selectTypeOfColumnData.append(option_1);
+                selectTypeOfColumnData.append(option_2);
+                selectTypeOfColumnData.addEventListener("change", function() {
+                    let thesWithTypeOfColumn = document.querySelectorAll('th');
+                    if (thesWithTypeOfColumn.length != 0) {
+                        if (thesWithTypeOfColumn[0].hasAttribute("data-type-column-data")) {
+                            let indexOfSelect = parseInt(selectTypeOfColumnData.getAttribute('id').match(/\d+/));
+                            thesWithTypeOfColumn[indexOfSelect].dataset.typeColumnData = selectTypeOfColumnData.value;
+                        }
+                    }
+                });
+                
+            }
+        }
+
+        // ****************************************************************************************************\\
+        // все функции для сортировки столбцов
+
+        // Направление сортировки
+        let directions = Array.from(headers).map(function(header) {
+            return '';
+        });
+
+        // Преобразовать содержимое данной ячейки в заданном столбце
+        let transform = function(index, content) {
+            // Получить тип данных столбца
+            let type = headers[index].getAttribute('data-type-column-data');
+            switch (type) {
+                case 'number':
+                    return parseFloat(content);
+                case 'string':
+                default:
+                    return String(content);
+            }
+        };
+        
+        // ф-ция сортировки
+        let sortColumn = function(index) {
+            // Получить текущее направление
+            let direction = directions[index] || 'asc';
+            // задание направления
+            let multiplier = (direction === 'asc') ? 1 : -1;
+
+            let newRows = rowsArray.slice(1, rowsArray.length);
+            newRows.sort(function(rowA, rowB) {  
+                let cellA = rowA.querySelectorAll('td')[index].innerHTML;
+                let cellB = rowB.querySelectorAll('td')[index].innerHTML;
+                let a = transform(index, cellA);
+                let b = transform(index, cellB);    
+                switch (true) {
+                    case a > b: return 1 * multiplier;
+                    case a < b: return -1 * multiplier;
+                    case a === b: return 0;
+                }
+            });
+            // Удалить старые строки
+            let trsWithoutTh = document.querySelectorAll('tr:not([data-type-tr])');
+            [].forEach.call(trsWithoutTh, function(trWithoutTh) {
+                table.removeChild(trWithoutTh);
+            });
+            // Поменять направление
+            directions[index] = direction === 'asc' ? 'desc' : 'asc';
+            // Добавить новую строку
+            newRows.forEach(function(newRow) {
+                table.appendChild(newRow);
+            });
+
+            rowsArray = Array.from(table.rows);
+        };
+        // ****************************************************************************************************\\
+        
+        function tableSearch() {
+            searchMaking = true; //выполняется фильтрация
+            rowsArraySearch = [];
+            let regPhrase = new RegExp(searchInput.value, 'i');
+            let flag = false;
+            for (let i = 1; i < rowsArray.length; i++) {    
+                flag = false;
+                for (let j = rowsArray[i].cells.length - 1; j >= 0; j--) {    
+                    flag = regPhrase.test(rowsArray[i].cells[j].innerHTML);
+                    if (flag) {
+                        break;
+                    }
+                }
+                if (flag) {
+                    rowsArraySearch.push(rowsArray[i]);
+                }
+            }
+            if (searchInput.value == "") {
+                searchMaking = false;
+            }
+        }
+        // ---------------------------------------------------------------------------------------------------\\
+
+
+        // ---------------------------------------------------------------------------------------------------\\
+        // Задание 2
+        let buttonText = document.getElementById("text");
+        let buttonBackground = document.getElementById('background');
+
+        buttonText.onclick = function() {
+            buttonText.classList.add('chosen');
+            buttonBackground.classList.remove('chosen');
+
+        };
+        buttonBackground.onclick = function() {
+            buttonBackground.classList.add('chosen');
+            buttonText.classList.remove('chosen');
+        };
+
+        $("#polzunok").slider({
+            animate: "slow",
+            value: 0,
+            min: 0,
+            max: 16777215,
+            step: 100, 
+            slide :  function(event, ui) {    
+                $("#result_polzunok").text(SliderValueReader(ui.value));
+                $("body").css( $(".chosen").attr('value'), SliderValueReader(ui.value));
+            }
+        });
+        $( "#result_polzunok" ).text( SliderValueReader($( "#polzunok" ).slider( "value" )));
+
+        // отображение значения цвета в 16-ричной системе
+        function SliderValueReader(sliderValue) {
+            let hexSliderValue = sliderValue.toString(16).toUpperCase();
+            while (hexSliderValue.length < 6) {
+                hexSliderValue = '0' + hexSliderValue;
+            }
+            return '#'+ hexSliderValue;
+        }
+        // ---------------------------------------------------------------------------------------------------\\
+
+    </script>
+</body>
+</html>
