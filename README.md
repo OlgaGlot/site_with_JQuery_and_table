@@ -6,3 +6,5 @@ Javascript-компонент построения таблицы содержи
 3. фильтрация.
 
 Slider выбора цвета текста и фона страницы реализован с использованием библиотек jquery и jquery-ui.
+
+Данный сайт размещен [здесь](https://olgaglot.github.io/site_with_JQuery_and_table/).
